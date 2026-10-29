@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARTILLERY COMMAND - FRONT DE L'EST (1942)</title>
+    <style>
+        :root {
+            --bg-dirt: #161311;
+            --panel-iron: #22201d;
+            --panel-rust: #2c1e17;
+            --panel-border: #4a3b32;
+            --accent-red-glow: #e74c3c;
+            --accent-amber: #d35400;
+            --accent-yellow-bulb: #f39c12;
+            --paper-aged: #d4c5a9;
+            --paper-ink: #1a1612;
+            --text-muted: #958371;
+            --font-typewriter: 'Courier New', Courier, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg-dirt);
+            background-image: radial-gradient(circle, #221c17 0%, #0d0b09 100%);
+            color: var(--paper-aged);
+            font-family: var(--font-typewriter);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        body::after {
+            content: "";
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(rgba(18,15,13,0), rgba(0,0,0,0.6));
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .screen {
+            display: none;
+            width: 100%;
+            max-width: 950px;
+            background: var(--panel-iron);
+            border: 4px solid var(--panel-border);
+            border-radius: 2px;
+            padding: 25px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8), inset 0 0 50px rgba(0,0,0,0.5);
+            margin: auto;
+            position: relative;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        .screen.active { display: flex; flex-direction: column; gap: 15px; }
+
+        h1, h2, h3 { 
+            text-align: center; 
+            color: var(--paper-aged); 
+            font-weight: bold; 
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-bottom: 2px dashed var(--panel-border);
+            padding-bottom: 5px;
+        }
+        
+        button {
+            background: #2b2520;
+            color: var(--paper-aged);
+            border: 2px solid var(--panel-border);
+            padding: 8px 12px;
+            cursor: pointer;
+            font-family: var(--font-typewriter);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+        button:hover:not(:disabled) { background: #3b332b; border-color: var(--accent-amber); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button.btn-action { background: #1b3022; border-color: #27ae60; color: #2ecc71; font-weight: bold; }
+        button.btn-action:hover:not(:disabled) { background: #23402e; }
+        button.btn-fire { background: #421a17; border-color: var(--accent-red-glow); color: #e74c3c; font-weight: bold; }
+
+        input[type="text"], input[type="number"], select {
+            background: #0d0b09;
+            border: 2px inset var(--panel-border);
+            color: var(--paper-aged);
+            padding: 6px;
+            font-family: var(--font-typewriter);
+            font-size: 0.8rem;
+            width: 100%;
+        }
+        input:disabled, select:disabled { opacity: 0.6; background: #161311; cursor: not-allowed; }
+
+        .lobby-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .lobby-menu input[type="text"] { text-align: center; font-size: 1.1rem; letter-spacing: 2px; }
+
+        .roles-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .role-card {
+            background: #191613;
+            border: 2px solid var(--panel-border);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            text-align: center;
+        }
+        .role-card.selected { border-color: var(--accent-amber); background: rgba(211,84,0,0.05); }
+        .role-status { font-size: 0.8rem; color: var(--accent-yellow-bulb); min-height: 20px; font-weight: bold; }
+        .code-display {
+            background: #090807;
+            border: 2px inset var(--panel-border);
+            padding: 10px;
+            color: var(--accent-yellow-bulb);
+            text-align: center;
+            font-size: 1.2rem;
+            letter-spacing: 5px;
+        }
+
+        .game-view {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0; left: 0;
+            background: var(--bg-dirt);
+            display: none;
+            flex-direction: column;
+            padding: 10px;
+            gap: 10px;
+            overflow: hidden;
+        }
+        .game-view.active { display: flex; }
+
+        .artillery-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 10px;
+            height: calc(100vh - 55px);
+        }
+        .panel {
+            background: var(--panel-iron);
+            border: 2px solid var(--panel-border);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
+        }
+        .stock-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 4px;
+            font-size: 0.75rem;
+            background: #0d0b09;
+            padding: 6px;
+            border: 1px inset var(--panel-border);
+        }
+        .log-terminal {
+            background: #080605;
+            color: #b39b82;
+            font-size: 0.7rem;
+            padding: 6px;
+            flex: 1;
+            overflow-y: auto;
+            border: 2px inset var(--panel-border);
+        }
+        .log-entry { margin-bottom: 3px; border-bottom: 1px dotted #222; }
+        .log-entry.info { color: #3498db; }
+        .log-entry.warn { color: #e67e22; }
+        .log-entry.success { color: #2ecc71; }
+
+        .global-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background: #191613;
+            padding: 8px;
+            border: 1px solid var(--panel-border);
+        }
+        
+        #canonsList {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+        }
+        .canon-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #1b1714;
+            padding: 4px 6px;
+            border: 1px solid var(--panel-border);
+            border-left: 4px solid var(--accent-amber);
+            font-size: 0.75rem;
+        }
+        .canon-id { font-weight: bold; width: 25px; color: var(--accent-yellow-bulb); }
+        .canon-angles { width: 85px; text-align: center; color: var(--paper-aged); font-size: 0.7rem; }
+        .progress-bar-container {
+            width: 50px; height: 12px; background: #0d0b09; border: 1px inset var(--panel-border); position: relative; overflow: hidden;
+        }
+        .progress-bar-fill { height: 100%; width: 0%; background: #27ae60; transition: width 0.2s; }
+        .progress-bar-text {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; font-weight: bold; color: #fff;
+        }
+        .canon-status { font-size: 0.65rem; width: 85px; text-align: right; }
+
+        .radio-layout { max-width: 650px; margin: auto; width: 100%; }
+        .radio-display { background: #0d0b09; border: 3px inset var(--panel-border); padding: 12px; }
+        .freq-readout { font-size: 1.4rem; color: var(--accent-yellow-bulb); text-align: center; margin-bottom: 5px; text-shadow: 0 0 5px var(--accent-amber); }
+        .morse-screen { background: #040303; color: var(--accent-green, #2ecc71); min-height: 100px; padding: 10px; font-size: 0.9rem; word-break: break-all; border: 2px inset #112211; }
+        .radio-controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+
+        .map-layout {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 10px;
+            height: calc(100vh - 55px);
+        }
+        
+        .map-canvas-container {
+            position: relative;
+            background: #0d0b09;
+            border: 2px inset var(--panel-border);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #tacticalCanvas { cursor: crosshair; display: block; }
+
+        #ficheSuiveuse {
+            position: absolute;
+            top: 55px; right: 15px;
+            width: 305px;
+            background: var(--paper-aged);
+            color: var(--paper-ink);
+            border: 3px solid #5a4a3a;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.9);
+            z-index: 1000;
+            user-select: none;
+            display: none;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .fiche-header {
+            background: #4a3b32;
+            color: var(--paper-aged);
+            padding: 5px 10px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            text-align: center;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #2c1e17;
+        }
+        .fiche-section {
+            padding: 5px 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            border-bottom: 1px dashed #8c7a65;
+        }
+        .sec-jaune { background: rgba(211, 168, 69, 0.25); }
+        .sec-rouge { background: rgba(192, 57, 43, 0.15); }
+        .sec-bleu  { background: rgba(41, 128, 185, 0.15); }
+        .sec-correc{ background: rgba(0, 0, 0, 0.05); font-size: 0.65rem; }
+        
+        .fiche-row {
+            display: grid;
+            grid-template-columns: 130px 1fr;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.7rem;
+        }
+        .fiche-row label { color: #3a2e23; font-weight: bold; }
+        
+        #ficheSuiveuse input {
+            background: #f4ebd0;
+            border: 1px solid #7c6953;
+            color: #1a1612;
+            padding: 3px;
+        }
+        #ficheSuiveuse input:disabled {
+            background: #e2d6b5;
+            color: #5c4f3d;
+            border-color: #b09e82;
+        }
+
+        #contextMenu {
+            display: none;
+            position: fixed;
+            background: #191613;
+            border: 2px solid var(--accent-amber);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+            z-index: 2000;
+            padding: 5px 0;
+            min-width: 180px;
+            font-size: 0.8rem;
+        }
+        .context-item { padding: 8px 15px; cursor: pointer; color: var(--paper-aged); }
+        .context-item:hover { background: #2f2721; color: var(--accent-yellow-bulb); }
+        .context-item.danger { color: var(--accent-red-glow); }
+        .context-item.success { color: #2ecc71; }
+    </style>
+</head>
+<body>
+
+    <!-- ================= 1. ÉCRAN LOBBY ================= -->
+    <div id="screenLobby" class="screen active">
+        <h1>POSTE DE COMMANDEMENT - SECTEUR NORD</h1>
+        <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: -10px;">
+            Hiver 1942 • Ligne de front de Voronej • "Pas un pas en arrière"
+        </div>
+        <div class="lobby-menu" style="margin-top: 10px;">
+            <input type="text" id="inputPseudo" placeholder="VOTRE GRADE ET NOM" maxlength="20" value="Sergent Petrov">
+            <button class="btn-action" onclick="creerPartie()">ÉTABLIR LA LIAISON (CRÉER)</button>
+            <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem;">— OU REJOINDRE —</div>
+            <input type="text" id="inputCodeJoin" placeholder="INDICATIF (6 CAR.)" maxlength="6">
+            <button onclick="rejoindrePartie()">REJOINDRE LE RÉSEAU</button>
+        </div>
+    </div>
+
+    <!-- ================= 2. SALON DE SÉLECTION DES RÔLES ================= -->
+    <div id="screenSalon" class="screen">
+        <h2>RÉPARTITION DES POSTES DE COMBAT</h2>
+        <div>
+            <p style="text-align: center; margin-bottom: 5px; color: var(--text-muted);">FRÉQUENCE / INDICATIF DE RÉSEAU :</p>
+            <div class="code-display" id="displayCodeSalon">------</div>
+        </div>
+
+        <div class="roles-grid">
+            <div class="role-card" id="cardArtillerie">
+                <h3>Batterie</h3>
+                <p style="font-size: 0.75rem; color: var(--text-muted);">Canons M-10 de 152mm & fardeaux de charges.</p>
+                <div class="role-status" id="statusArtillerie">DISPONIBLE</div>
+                <button id="btnChooseArtillerie" onclick="choisirRole('Artillerie')">Prendre la batterie</button>
+            </div>
+            <div class="role-card" id="cardRadio">
+                <h3>Radiotélégraphiste</h3>
+                <p style="font-size: 0.75rem; color: var(--text-muted);">Poste à galène, clé Morse & ravitaillement.</p>
+                <div class="role-status" id="statusRadio">DISPONIBLE</div>
+                <button id="btnChooseRadio" onclick="choisirRole('Radio')">Prendre le poste radio</button>
+            </div>
+            <div class="role-card" id="cardMap">
+                <h3>Cartographe</h3>
+                <p style="font-size: 0.75rem; color: var(--text-muted);">Table d'état-major & calculs balistiques.</p>
+                <div class="role-status" id="statusMap">DISPONIBLE</div>
+                <button id="btnChooseMap" onclick="choisirRole('Carte')">Prendre la table</button>
+            </div>
+        </div>
+
+        <button class="btn-action" id="btnLancerPartie" onclick="lancerPartie()" disabled style="margin-top: 10px;">OUVRIR LE FEU (LANCER)</button>
+    </div>
+
+    <!-- ================= 3A. POSTE ARTILLERIE ================= -->
+    <div id="viewArtillerie" class="game-view">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed var(--panel-border); padding-bottom: 5px;">
+            <h3 style="font-size: 0.9rem;">BATTERIE DE CANONS LOURDS — FROID ET POUDRE</h3>
+            <button onclick="quitterPoste()" style="background: #421a17; color:#e74c3c; border-color:#e74c3c; padding: 4px 8px;">Abandonner le poste</button>
+        </div>
+        <div class="artillery-layout">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="panel">
+                    <h3 style="font-size: 0.8rem;">Dépôt de Munitions</h3>
+                    <div class="stock-grid" id="stockGrid"></div>
+                    <div id="statusCamionsLog" style="font-size: 0.65rem; color: var(--accent-amber);">
+                        Camions de ravitaillement: 3/3
+                    </div>
+                </div>
+                <div class="panel" style="flex: 1; display: flex; flex-direction: column;">
+                    <h3 style="font-size: 0.8rem;">Journal de Bord du Front</h3>
+                    <div class="log-terminal" id="logTerminal"></div>
+                </div>
+            </div>
+            <div class="panel" style="display: flex; flex-direction: column;">
+                <h3 style="font-size: 0.8rem;">Ligne de Pièces (10 Canons)</h3>
+                <div class="global-controls">
+                    <input type="text" id="inputGlobal" placeholder="Gis/Elév (ex: 245/42)" style="width: 150px;">
+                    <button class="btn-action" onclick="appliquerGlobal()">POINTER TOUTE LA LIGNE</button>
+                    <div style="flex: 1;"></div>
+                    <button class="btn-fire" onclick="feuBatterie()">FEU DE SALVE</button>
+                </div>
+                <div id="canonsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 3B. POSTE RADIO ================= -->
+    <div id="viewRadio" class="game-view">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed var(--panel-border); padding-bottom: 5px;">
+            <h2>POSTE DE TRANSMISSION RADIO</h2>
+            <button onclick="quitterPoste()" style="background: #421a17; color:#e74c3c; border-color:#e74c3c;">Abandonner le poste</button>
+        </div>
+        <div class="radio-layout" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+            <div class="panel">
+                <h3>Fréquences du Quartier Général</h3>
+                <div style="font-size: 0.75rem; color: var(--text-muted); display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                    <div>• <b>117.30 MHz</b>: Observateur (CFF)</div>
+                    <div>• <b>128.90 MHz</b>: Intendance (REQ)</div>
+                    <div>• <b>122.50 MHz</b>: Météo / Vent (ATIS)</div>
+                </div>
+            </div>
+            <div class="panel">
+                <h3>Récepteur & Manipulateur Morse</h3>
+                <div class="radio-display">
+                    <div id="radioFreq" class="freq-readout">FRÉQ : 110.00 MHz</div>
+                    <div id="radioMorse" class="morse-screen">[SILENCE RADIO - TOURNER LE CADRAN]</div>
+                </div>
+                <div class="radio-controls">
+                    <button onclick="ajusterFrequence(-1.0)">-1 MHz</button>
+                    <button onclick="ajusterFrequence(-0.1)">-0.1</button>
+                    <button onclick="ajusterFrequence(0.1)">+0.1</button>
+                    <button onclick="ajusterFrequence(1.0)">+1 MHz</button>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <input type="text" id="inputMorse" placeholder="ex: READY (sur 117.30) ou REQ HE 50 (sur 128.90)" style="flex: 1;">
+                    <button class="btn-action" onclick="envoyerMorseManuel()">TRANSMETTRE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 3C. POSTE MAP OPÉRATEUR ================= -->
+    <div id="viewMap" class="game-view">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed var(--panel-border); padding-bottom: 5px;">
+            <h3 style="font-size: 0.9rem;">TABLE D'ÉTAT-MAJOR — CARTE TOPOGRAPHIQUE</h3>
+            <button onclick="quitterPoste()" style="background: #421a17; color:#e74c3c; border-color:#e74c3c; padding: 4px 8px;">Abandonner le poste</button>
+        </div>
+        <div class="map-layout">
+            <div class="map-canvas-container" id="mapContainer">
+                <canvas id="tacticalCanvas"></canvas>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div class="panel">
+                    <h3 style="font-size: 0.8rem;">Règle de Mesure</h3>
+                    <div style="font-size: 0.65rem; color: var(--text-muted); line-height: 1.3;">
+                        <div>• <b>Clic simple</b> : Repérage visuel (cible).</div>
+                        <div>• <b>Shift + Glisser</b> : Règle topographique (persistante).</div>
+                    </div>
+                    <div id="mesureLiveBox" style="margin-top: 4px; background: #0d0b09; padding: 5px; font-size: 0.7rem; color: var(--accent-yellow-bulb); border: 1px inset var(--panel-border);">
+                        Mesure Règle : --
+                    </div>
+                </div>
+
+                <div class="panel" style="flex: 1;">
+                    <h3 style="font-size: 0.8rem;">Calculateur de Vent (Manuel)</h3>
+                    <div style="font-size: 0.7rem; display: flex; flex-direction: column; gap: 6px;">
+                        <div style="display: grid; grid-template-columns: 95px 1fr; align-items: center; gap: 4px;">
+                            <label style="color: var(--text-muted);">Dir. Vent (°):</label>
+                            <input type="number" id="calcVentDir" value="0" placeholder="ex: 120">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 95px 1fr; align-items: center; gap: 4px;">
+                            <label style="color: var(--text-muted);">Vit. Vent (m/s):</label>
+                            <input type="number" id="calcVentVit" value="0" placeholder="ex: 5">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 95px 1fr; align-items: center; gap: 4px;">
+                            <label style="color: var(--text-muted);">Azimut Tir (°):</label>
+                            <input type="number" id="calcAzTir" value="0.0" placeholder="ex: 245.0">
+                        </div>
+                        <button onclick="calculerVentTraversManuel()" style="background: #1b263b; color:#3498db; border-color:#3498db; margin-top: 2px;">Calculer Composante</button>
+                        <div id="resultVentTrav" style="background: #0d0b09; padding: 6px; font-size: 0.75rem; color: var(--accent-yellow-bulb); text-align: center; border: 1px inset var(--panel-border);">
+                            Travers : -- m/s
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= FICHE SUIVEUSE ================= -->
+    <div id="ficheSuiveuse">
+        <div class="fiche-header" id="ficheHeader">
+            <span>FEUILLE DE TIR #<span id="ficheIdNum">1</span></span>
+            <span id="fichePosteActif" style="font-size: 0.65rem; color: #f39c12;">[RADIO]</span>
+        </div>
+        <div class="fiche-section sec-jaune">
+            <div class="fiche-row"><label>COORDONNÉES</label><input type="text" id="fCoord"></div>
+            <div class="fiche-row"><label>TYPE MUNITION</label><input type="text" id="fMun"></div>
+            <div class="fiche-row"><label>TYPE CIBLE</label><input type="text" id="fCible"></div>
+            <div class="fiche-row"><label>TYPE FRAPPE</label><input type="text" id="fFrappe"></div>
+            <div class="fiche-row"><label>INTENSITÉ</label><input type="text" id="fIntensite"></div>
+            <div class="fiche-row"><label>VENT (V / D)</label><input type="text" id="fVent"></div>
+        </div>
+        <div class="fiche-section sec-rouge">
+            <div class="fiche-row"><label>AZIMUTH</label><input type="text" id="fAzimuth"></div>
+            <div class="fiche-row"><label>DISTANCE</label><input type="text" id="fDistance"></div>
+            <div class="fiche-row"><label>OBSTACLE</label><input type="text" id="fObstacle"></div>
+            <div class="fiche-row"><label>VENT TRAVERS</label><input type="text" id="fVentTrav"></div>
+        </div>
+        <div class="fiche-section sec-bleu">
+            <div class="fiche-row"><label>CHARGE (1-7)</label><input type="text" id="fCharge"></div>
+            <div class="fiche-row"><label>HAUSSE</label><input type="text" id="fHausse"></div>
+            <div class="fiche-row"><label>AZIMUTH COR.</label><input type="text" id="fAzCorr"></div>
+        </div>
+        <div class="fiche-section sec-correc">
+            <div style="font-weight: bold; margin-bottom: 2px; color:#2c1e17;">CORRECTIONS OBSERVATEUR :</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                <input type="text" id="fCorrN" placeholder="N: 0">
+                <input type="text" id="fCorrE" placeholder="E: 0">
+                <input type="text" id="fCorrS" placeholder="S: 0">
+                <input type="text" id="fCorrO" placeholder="O: 0">
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MENU CONTEXTUEL ================= -->
+    <div id="contextMenu">
+        <div class="context-item success" onclick="menuActionCreerFiche()">➕ Établir nouvelle feuille</div>
+        <div style="border-top: 1px dashed var(--panel-border); margin: 3px 0;"></div>
+        <div class="context-item" onclick="menuActionEnvoyer('Radio')">➔ Transmettre : Radio</div>
+        <div class="context-item" onclick="menuActionEnvoyer('Carte')">➔ Transmettre : Cartographe</div>
+        <div class="context-item" onclick="menuActionEnvoyer('Artillerie')">➔ Transmettre : Batterie</div>
+        <div style="border-top: 1px dashed var(--panel-border); margin: 3px 0;"></div>
+        <div class="context-item danger" onclick="menuActionSupprimer()">🗑 Détruire / Archiver</div>
+    </div>
+
+    <!-- ================= SCRIPT INTÉGRÉ FIREBASE ET JEU ================= -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+        import { getDatabase, ref, set, get, onValue, update, remove } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA3QnZJvdFXADiHIsDKZfYw7a8bGf-jy2M",
+            authDomain: "artillery-1942.firebaseapp.com",
+            databaseURL: "https://artillery-1942-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "artillery-1942",
+            storageBucket: "artillery-1942.appspot.com",
+            messagingSenderId: "276314358475",
+            appId: "1:276314358475:web:28a6aa4e225d545921914e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let currentCode = "";
+        let monPseudo = "Sergent Petrov";
+        let monRoleActuel = null;
+        let rolesPris = { "Artillerie": null, "Radio": null, "Carte": null };
+        let proprietaireFiche = null;
+        let ficheExiste = false;
+
+        let donneesFiche = {
+            id: 1, coord: "", mun: "", cible: "", frappe: "", intensite: "", vent: "",
+            azimuth: "", distance: "", obstacle: "", ventTrav: "",
+            charge: "", hausse: "", azCorr: "",
+            corrN: "", corrE: "", corrS: "", corrO: ""
+        };
+
+        let audioCtx = null;
+        let whiteNoiseNode = null;
+        let noiseGain = null;
+
+        const mapImage = new Image();
+        mapImage.src = "maps2.jpg"; 
+        let carteChargee = false;
+        
+        mapImage.onload = () => {
+            carteChargee = true;
+            redimensionnerCanvasCarte();
+        };
+
+        window.addEventListener('resize', () => {
+            if (monRoleActuel === "Carte") redimensionnerCanvasCarte();
+        });
+
+        const MAP_BOUNDS = { leftPct: 0.046, topPct: 0.046, rightPct: 0.954, bottomPct: 0.954 };
+
+        function redimensionnerCanvasCarte() {
+            const container = document.getElementById("mapContainer");
+            const canvas = document.getElementById("tacticalCanvas");
+            if (!container || !canvas || !carteChargee) return;
+
+            let cW = container.clientWidth;
+            let cH = container.clientHeight;
+            let imgAspect = mapImage.naturalWidth / mapImage.naturalHeight;
+            let contAspect = cW / cH;
+
+            let renderW, renderH;
+            if (contAspect > imgAspect) {
+                renderH = cH;
+                renderW = cH * imgAspect;
+            } else {
+                renderW = cW;
+                renderH = cW / imgAspect;
+            }
+
+            canvas.width = renderW;
+            canvas.height = renderH;
+            canvas.style.width = `${renderW}px`;
+            canvas.style.height = `${renderH}px`;
+
+            dessinerCarteTactique(canvas.getContext("2d"), renderW, renderH);
+        }
+
+        function initialiserAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let bufferSize = audioCtx.sampleRate * 2;
+                let noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                let output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) { output[i] = Math.random() * 2 - 1; }
+
+                whiteNoiseNode = audioCtx.createBufferSource();
+                whiteNoiseNode.buffer = noiseBuffer;
+                whiteNoiseNode.loop = true;
+
+                noiseGain = audioCtx.createGain();
+                noiseGain.gain.value = 0.0;
+                whiteNoiseNode.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                whiteNoiseNode.start();
+            } else if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function genererCodeUnique() {
+            let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            let code = "";
+            for(let i=0; i<6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+            return code;
+        }
+
+        function recupererPseudo() {
+            let champ = document.getElementById("inputPseudo");
+            if(champ && champ.value.trim() !== "") { monPseudo = champ.value.trim(); }
+        }
+
+        window.creerPartie = function() {
+            recupererPseudo();
+            currentCode = genererCodeUnique();
+            document.getElementById("displayCodeSalon").textContent = currentCode;
+            changerEcranSalon("screenSalon");
+            ecouterReseauFirebase(currentCode);
+            mettreAJourSalonUI();
+        }
+
+        window.rejoindrePartie = function() {
+            let codeInput = document.getElementById("inputCodeJoin").value.trim().toUpperCase();
+            if(codeInput.length < 6) { alert("Indicateur de réseau invalide."); return; }
+            recupererPseudo();
+            currentCode = codeInput;
+            document.getElementById("displayCodeSalon").textContent = currentCode;
+            changerEcranSalon("screenSalon");
+            ecouterReseauFirebase(currentCode);
+            mettreAJourSalonUI();
+        }
+
+        function ecouterReseauFirebase(codeCanal) {
+            const rolesRef = ref(db, `canons-rooms/${codeCanal}/roles`);
+            onValue(rolesRef, (snapshot) => {
+                const data = snapshot.val() || {};
+                rolesPris = data;
+                mettreAJourSalonUI();
+            });
+        }
+
+        window.choisirRole = function(roleNom) {
+            recupererPseudo();
+            if (!currentCode) return;
+            const roleRef = ref(db, `canons-rooms/${currentCode}/roles/${roleNom}`);
+            
+            get(roleRef).then((snapshot) => {
+                let occupant = snapshot.val();
+                if (occupant && occupant !== monPseudo) {
+                    alert("Ce poste est déjà occupé par un autre artilleur !");
+                    return;
+                }
+                // Libérer l'ancien rôle éventuel
+                for(let r in rolesPris) {
+                    if(rolesPris[r] === monPseudo) {
+                        set(ref(db, `canons-rooms/${currentCode}/roles/${r}`), null);
+                    }
+                }
+                set(roleRef, monPseudo);
+                monRoleActuel = roleNom;
+                mettreAJourSalonUI();
+            });
+        }
+
+        function mettreAJourSalonUI() {
+            const mapDomIds = { "Artillerie": "Artillerie", "Radio": "Radio", "Carte": "Map" };
+            ['Artillerie', 'Radio', 'Carte'].forEach(r => {
+                let domKey = mapDomIds[r];
+                let card = document.getElementById("card" + domKey);
+                let status = document.getElementById("status" + domKey);
+                let btn = document.getElementById("btnChoose" + domKey);
+                if(!card || !status || !btn) return;
+
+                if(rolesPris[r] !== null && rolesPris[r] !== undefined) {
+                    card.classList.add("selected");
+                    if(rolesPris[r] === monPseudo) {
+                        status.textContent = "ASSIGNÉ (VOUS)";
+                        btn.textContent = "Votre poste";
+                    } else {
+                        status.textContent = `OCCUPÉ (${rolesPris[r]})`;
+                        btn.textContent = "Occupé";
+                    }
+                } else {
+                    card.classList.remove("selected");
+                    status.textContent = "DISPONIBLE";
+                    btn.textContent = "Prendre ce poste";
+                }
+            });
+            let btnLancer = document.getElementById("btnLancerPartie");
+            if(btnLancer) btnLancer.disabled = !monRoleActuel;
+        }
+
+        window.lancerPartie = function() {
+            if(!monRoleActuel) return;
+            initialiserAudio();
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+
+            if(monRoleActuel === "Artillerie") {
+                document.getElementById("viewArtillerie").classList.add("active");
+                initialiserPosteArtillerie();
+            } else if(monRoleActuel === "Radio") {
+                document.getElementById("viewRadio").classList.add("active");
+                actualiserRadioUI();
+            } else if(monRoleActuel === "Carte") {
+                document.getElementById("viewMap").classList.add("active");
+                initialiserPosteCarte();
+            }
+            rafraichirAffichageFiche();
+        }
+
+        window.quitterPoste = function() {
+            if(monRoleActuel && currentCode) {
+                set(ref(db, `canons-rooms/${currentCode}/roles/${monRoleActuel}`), null);
+                monRoleActuel = null;
+            }
+            if(noiseGain) noiseGain.gain.value = 0.0;
+            document.querySelectorAll('.game-view').forEach(v => v.classList.remove('active'));
+            document.getElementById("ficheSuiveuse").style.display = "none";
+            changerEcranSalon("screenSalon");
+        }
+
+        function changerEcranSalon(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            let target = document.getElementById(id);
+            if(target) target.classList.add('active');
+        }
+
+        // ================= GESTION DRAG & DROP & CONTEXTUEL =================
+        const fiche = document.getElementById("ficheSuiveuse");
+        const header = document.getElementById("ficheHeader");
+        const contextMenu = document.getElementById("contextMenu");
+        let isDragging = false, startX, startY;
+
+        header.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX - fiche.offsetLeft;
+            startY = e.clientY - fiche.offsetTop;
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+
+        function onMouseMove(e) {
+            if (!isDragging) return;
+            fiche.style.left = `${e.clientX - startX}px`;
+            fiche.style.top = `${e.clientY - startY}px`;
+            fiche.style.position = 'absolute';
+        }
+
+        function onMouseUp() {
+            isDragging = false;
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+
+        document.addEventListener('contextmenu', (e) => {
+            if(monRoleActuel) {
+                e.preventDefault();
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = `${e.clientX}px`;
+                contextMenu.style.top = `${e.clientY}px`;
+            }
+        });
+
+        document.addEventListener('click', () => { contextMenu.style.display = 'none'; });
+
+        function sauvegarderValeursActuelles() {
+            donneesFiche.coord = document.getElementById("fCoord").value;
+            donneesFiche.mun = document.getElementById("fMun").value;
+            donneesFiche.cible = document.getElementById("fCible").value;
+            donneesFiche.frappe = document.getElementById("fFrappe").value;
+            donneesFiche.intensite = document.getElementById("fIntensite").value;
+            donneesFiche.vent = document.getElementById("fVent").value;
+
+            donneesFiche.azimuth = document.getElementById("fAzimuth").value;
+            donneesFiche.distance = document.getElementById("fDistance").value;
+            donneesFiche.obstacle = document.getElementById("fObstacle").value;
+            donneesFiche.ventTrav = document.getElementById("fVentTrav").value;
+
+            donneesFiche.charge = document.getElementById("fCharge").value;
+            donneesFiche.hausse = document.getElementById("fHausse").value;
+            donneesFiche.azCorr = document.getElementById("fAzCorr").value;
+
+            donneesFiche.corrN = document.getElementById("fCorrN").value;
+            donneesFiche.corrE = document.getElementById("fCorrE").value;
+            donneesFiche.corrS = document.getElementById("fCorrS").value;
+            donneesFiche.corrO = document.getElementById("fCorrO").value;
+        }
+
+        function injecterValeursFiche() {
+            document.getElementById("ficheIdNum").textContent = donneesFiche.id;
+            document.getElementById("fCoord").value = donneesFiche.coord;
+            document.getElementById("fMun").value = donneesFiche.mun;
+            document.getElementById("fCible").value = donneesFiche.cible;
+            document.getElementById("fFrappe").value = donneesFiche.frappe;
+            document.getElementById("fIntensite").value = donneesFiche.intensite;
+            document.getElementById("fVent").value = donneesFiche.vent;
+
+            document.getElementById("fAzimuth").value = donneesFiche.azimuth;
+            document.getElementById("fDistance").value = donneesFiche.distance;
+            document.getElementById("fObstacle").value = donneesFiche.obstacle;
+            document.getElementById("fVentTrav").value = donneesFiche.ventTrav;
+
+            document.getElementById("fCharge").value = donneesFiche.charge;
+            document.getElementById("fHausse").value = donneesFiche.hausse;
+            document.getElementById("fAzCorr").value = donneesFiche.azCorr;
+
+            document.getElementById("fCorrN").value = donneesFiche.corrN;
+            document.getElementById("fCorrE").value = donneesFiche.corrE;
+            document.getElementById("fCorrS").value = donneesFiche.corrS;
+            document.getElementById("fCorrO").value = donneesFiche.corrO;
+        }
+
+        window.menuActionCreerFiche = function() {
+            ficheExiste = true;
+            proprietaireFiche = "Radio";
+            donneesFiche = {
+                id: indexCff, coord: "", mun: "", cible: "", frappe: "", intensite: "", vent: "",
+                azimuth: "", distance: "", obstacle: "", ventTrav: "",
+                charge: "", hausse: "", azCorr: "",
+                corrN: "", corrE: "", corrS: "", corrO: ""
+            };
+            rafraichirAffichageFiche();
+            logTerminal(`Feuille de tir CFF #${indexCff} établie sur le réseau.`, "success");
+        }
+
+        window.menuActionEnvoyer = function(destinataire) {
+            if (!ficheExiste) return;
+            sauvegarderValeursActuelles();
+            proprietaireFiche = destinataire;
+            rafraichirAffichageFiche();
+            logTerminal(`Feuille transmise au poste : ${destinataire}`, "info");
+        }
+
+        window.menuActionSupprimer = function() {
+            ficheExiste = false;
+            proprietaireFiche = null;
+            fiche.style.display = 'none';
+            logTerminal("Feuille de tir détruite pour éviter qu'elle tombe aux mains de l'ennemi.", "warn");
+        }
+
+        function rafraichirAffichageFiche() {
+            if (ficheExiste && proprietaireFiche === monRoleActuel) {
+                fiche.style.display = 'block';
+                document.getElementById("fichePosteActif").textContent = `[${proprietaireFiche.toUpperCase()}]`;
+                injecterValeursFiche();
+                mettreAJourPermissionsFiche();
+            } else {
+                fiche.style.display = 'none';
+            }
+        }
+
+        function mettreAJourPermissionsFiche() {
+            let inputs = fiche.querySelectorAll('input');
+            inputs.forEach(inp => {
+                let parentClass = inp.closest('.fiche-section').className;
+                let editable = false;
+                if (parentClass.includes('sec-jaune') && monRoleActuel === 'Radio') editable = true;
+                if (parentClass.includes('sec-rouge') && monRoleActuel === 'Carte') editable = true;
+                if (parentClass.includes('sec-bleu') && monRoleActuel === 'Artillerie') editable = true;
+                if (parentClass.includes('sec-correc') && monRoleActuel === 'Radio') editable = true;
+                inp.disabled = !editable;
+            });
+        }
+
+        // ================= POSTE CARTE (AVEC REGLE PERSISTANTE) =================
+        let dernierImpactCarte = null;
+        let regleEnCours = false;
+        let regleDebut = null;
+        let regleFin = null;
+        let mesureValidee = null;
+
+        function canvasVersMonde(clientX, clientY, canvas) {
+            const rect = canvas.getBoundingClientRect();
+            let clickX = clientX - rect.left;
+            let clickY = clientY - rect.top;
+            let mapPixelLeft = canvas.width * MAP_BOUNDS.leftPct;
+            let mapPixelTop = canvas.height * MAP_BOUNDS.topPct;
+            let mapPixelRight = canvas.width * MAP_BOUNDS.rightPct;
+            let mapPixelBottom = canvas.height * MAP_BOUNDS.bottomPct;
+            let mapPixelWidth = mapPixelRight - mapPixelLeft;
+            let mapPixelHeight = mapPixelBottom - mapPixelTop;
+
+            let relX = (clickX - mapPixelLeft) / mapPixelWidth;
+            let relY = 1.0 - ((clickY - mapPixelTop) / mapPixelHeight);
+
+            return {
+                x: Math.max(0, Math.min(10000, relX * 10000)),
+                y: Math.max(0, Math.min(10000, relY * 10000))
+            };
+        }
+
+        function mondeVersCanvas(pos, canvas) {
+            let mapPixelLeft = canvas.width * MAP_BOUNDS.leftPct;
+            let mapPixelTop = canvas.height * MAP_BOUNDS.topPct;
+            let mapPixelRight = canvas.width * MAP_BOUNDS.rightPct;
+            let mapPixelBottom = canvas.height * MAP_BOUNDS.bottomPct;
+            let mapPixelWidth = mapPixelRight - mapPixelLeft;
+            let mapPixelHeight = mapPixelBottom - mapPixelTop;
+
+            let relX = pos.x / 10000;
+            let relY = pos.y / 10000;
+
+            return {
+                x: mapPixelLeft + (relX * mapPixelWidth),
+                y: mapPixelTop + ((1.0 - relY) * mapPixelHeight)
+            };
+        }
+
+        function initialiserPosteCarte() {
+            redimensionnerCanvasCarte();
+            const canvas = document.getElementById("tacticalCanvas");
+            if (!canvas) return;
+
+            canvas.onmousedown = (e) => {
+                let monde = canvasVersMonde(e.clientX, e.clientY, canvas);
+                if (e.shiftKey) {
+                    regleEnCours = true;
+                    regleDebut = monde;
+                    regleFin = monde;
+                    mesureValidee = null;
+                } else {
+                    dessinerCarteTactique(canvas.getContext("2d"), canvas.width, canvas.height);
+                }
+            };
+
+            canvas.onmousemove = (e) => {
+                if (!regleEnCours || !regleDebut) return;
+                regleFin = canvasVersMonde(e.clientX, e.clientY, canvas);
+                let dX = regleFin.x - regleDebut.x;
+                let dY = regleFin.y - regleDebut.y;
+                let dist = Math.hypot(dX, dY);
+                let az = (Math.atan2(dX, dY) * 180 / Math.PI + 360) % 360;
+                document.getElementById("mesureLiveBox").textContent = `Règle : ${Math.round(dist)}m | Az: ${az.toFixed(1)}°`;
+                dessinerCarteTactique(canvas.getContext("2d"), canvas.width, canvas.height);
+            };
+
+            window.onmouseup = () => {
+                if (regleEnCours) {
+                    regleEnCours = false;
+                    if (regleDebut && regleFin) {
+                        let dX = regleFin.x - regleDebut.x;
+                        let dY = regleFin.y - regleDebut.y;
+                        let dist = Math.hypot(dX, dY);
+                        let az = (Math.atan2(dX, dY) * 180 / Math.PI + 360) % 360;
+                        mesureValidee = { dist: Math.round(dist), az: az.toFixed(1) };
+                        document.getElementById("mesureLiveBox").textContent = `Règle : ${mesureValidee.dist}m | Az: ${mesureValidee.az}°`;
+                    }
+                    dessinerCarteTactique(canvas.getContext("2d"), canvas.width, canvas.height);
+                }
+            };
+        }
+
+        window.calculerVentTraversManuel = function() {
+            let dirVent = parseFloat(document.getElementById("calcVentDir").value) || 0;
+            let vitVent = parseFloat(document.getElementById("calcVentVit").value) || 0;
+            let azTir = parseFloat(document.getElementById("calcAzTir").value) || 0;
+
+            let angleVentRad = dirVent * Math.PI / 180.0;
+            let angleTirRad = azTir * Math.PI / 180.0;
+            let compNormale = vitVent * Math.sin(angleVentRad - angleTirRad);
+
+            let resBox = document.getElementById("resultVentTrav");
+            resBox.textContent = `Travers : ${compNormale.toFixed(2)} m/s (${compNormale >= 0 ? 'Droite' : 'Gauche'})`;
+            
+            donneesFiche.ventTrav = `${compNormale.toFixed(1)} m/s`;
+            if (ficheExiste && proprietaireFiche === monRoleActuel) {
+                document.getElementById("fVentTrav").value = donneesFiche.ventTrav;
+            }
+        }
+
+        function dessinerCarteTactique(ctx, w, h) {
+            ctx.clearRect(0, 0, w, h);
+            if (carteChargee) {
+                ctx.drawImage(mapImage, 0, 0, w, h);
+            } else {
+                ctx.fillStyle = "#0d0b09";
+                ctx.fillRect(0, 0, w, h);
+            }
+
+            let batScreen = mondeVersCanvas(POS_BATTERIE, ctx.canvas);
+
+            if (cibleActive && !cibleActive.detruite) {
+                let tgtScreen = mondeVersCanvas(cibleActive.pos, ctx.canvas);
+                ctx.strokeStyle = "rgba(231, 76, 60, 0.7)";
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(batScreen.x, batScreen.y);
+                ctx.lineTo(tgtScreen.x, tgtScreen.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            if (regleDebut && regleFin) {
+                let r1 = mondeVersCanvas(regleDebut, ctx.canvas);
+                let r2 = mondeVersCanvas(regleFin, ctx.canvas);
+                ctx.strokeStyle = "var(--accent-amber)";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(r1.x, r1.y);
+                ctx.lineTo(r2.x, r2.y);
+                ctx.stroke();
+
+                ctx.fillStyle = "var(--accent-amber)";
+                ctx.beginPath(); ctx.arc(r1.x, r1.y, 4, 0, 2 * Math.PI); ctx.fill();
+                ctx.beginPath(); ctx.arc(r2.x, r2.y, 4, 0, 2 * Math.PI); ctx.fill();
+
+                if (mesureValidee) {
+                    let midX = (r1.x + r2.x) / 2;
+                    let midY = (r1.y + r2.y) / 2;
+                    ctx.fillStyle = "#0d0b09";
+                    ctx.fillRect(midX - 50, midY - 12, 100, 18);
+                    ctx.strokeStyle = "var(--accent-amber)";
+                    ctx.strokeRect(midX - 50, midY - 12, 100, 18);
+                    ctx.fillStyle = "var(--accent-yellow-bulb)";
+                    ctx.font = "bold 10px Courier New";
+                    ctx.textAlign = "center";
+                    ctx.fillText(`${mesureValidee.dist}m | ${mesureValidee.az}°`, midX, midY + 1);
+                    ctx.textAlign = "left";
+                }
+            }
+
+            if (cibleActive && !cibleActive.detruite) {
+                let tgtScreen = mondeVersCanvas(cibleActive.pos, ctx.canvas);
+                ctx.fillStyle = "var(--accent-red-glow)";
+                ctx.beginPath(); ctx.arc(tgtScreen.x, tgtScreen.y, 9, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 11px Courier New";
+                ctx.fillText(`CFF #${cibleActive.id} (${cibleActive.type})`, tgtScreen.x + 12, tgtScreen.y + 4);
+            }
+
+            if (dernierImpactCarte) {
+                let impScreen = mondeVersCanvas(dernierImpactCarte, ctx.canvas);
+                ctx.fillStyle = "var(--accent-yellow-bulb)";
+                ctx.beginPath(); ctx.arc(impScreen.x, impScreen.y, 6, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = "#fff";
+                ctx.font = "bold 11px Courier New";
+                ctx.fillText("IMPACT", impScreen.x + 10, impScreen.y + 4);
+            }
+        }
+
+        // ================= MOTEUR JEU & BALISTIQUE =================
+        const FREQ_OBSERVATEUR = 117.30, FREQ_ATIS = 122.50, FREQ_LOG = 128.90;
+        const STATIONS_CONNUES = [FREQ_OBSERVATEUR, FREQ_ATIS, FREQ_LOG];
+        const TAILLE_CASE = 1000.0;
+        const COLONNES = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
+        const GRAVITE = 9.81, DISPERSION_STANDARD = 5.0;
+
+        const VITESSE_INITIALE = { 1: 121.3, 2: 171.5, 3: 210.0, 4: 242.5, 5: 271.1, 6: 297.1, 7: 320.9 };
+        const ALPHABET_OACI = ["ALPHA", "BRAVO", "CHARLIE", "DELTA", "ECHO", "FOXTROT", "GOLF", "HOTEL", "INDIA", "JULIETT", "KILO", "LIMA", "MIKE", "NOVEMBER", "OSCAR", "PAPA", "QUEBEC", "ROMEO", "SIERRA", "TANGO", "UNIFORM", "VICTOR", "WHISKEY", "XRAY", "YANKEE", "ZULU"];
+
+        let POS_BATTERIE = { x: 6350, y: 550 };
+        let stockMunitions = { "HE": 250, "AP": 250, "SMK": 100, "ILL": 100, "CLUSTER": 50, "REFRIGERANT": 50, "CHARGES": 1500 };
+        let maxMunitions = { "HE": 250, "AP": 250, "SMK": 100, "ILL": 100, "CLUSTER": 50, "REFRIGERANT": 50, "CHARGES": 1500 };
+
+        let camionsDisponibles = 3;
+        let jeuDemarre = false;
+        let cibleActive = null;
+        let indexCff = 1;
+        let ventDirection = 120, ventVitesseMS = 5;
+        let atisIndex = 0;
+        let frequenceActuelle = 110.00;
+
+        let messagesFrequences = {
+            [FREQ_OBSERVATEUR]: "[TRANSMETTRE READY SUR 117.30]",
+            [FREQ_ATIS]: "INFO ALPHA WIND 120 05",
+            [FREQ_LOG]: "INTENDANCE PRÊTE"
+        };
+
+        class PieceArtillerie {
+            constructor(id) {
+                this.id = id;
+                this.gisementActuel = 0.0; this.elevationActuelle = 0.0;
+                this.gisementCible = 0.0; this.elevationCible = 0.0;
+                this.enPointage = false; this.nbCharges = 1; this.typeObus = "HE";
+                this.estChargee = false; this.enRechargement = false; this.tempsRechargementRestant = 0.0;
+                this.chaleur = 0.0; this.enRefroidissementForce = false; this.tempsRefroidissementRestant = 0.0;
+                this.enPanne = false; this.tempsIndisponibilite = 0.0;
+            }
+        }
+        let canons = [];
+        for (let i = 1; i <= 10; i++) canons.push(new PieceArtillerie(i));
+
+        let artillerieInitialisee = false;
+        function initialiserPosteArtillerie() {
+            if (!artillerieInitialisee) {
+                initialiserInterfaceCanons();
+                setInterval(actualiserMeteoAtis, 20000);
+                let lastTime = performance.now();
+                function gameLoop(now) {
+                    let delta = (now - lastTime) / 1000.0;
+                    lastTime = now;
+                    if(document.getElementById("viewArtillerie").classList.contains("active")) {
+                        updateArtillerie(delta);
+                    }
+                    requestAnimationFrame(gameLoop);
+                }
+                requestAnimationFrame(gameLoop);
+                artillerieInitialisee = true;
+            }
+            actualiserStockUI();
+        }
+
+        function logTerminal(msg, type = "") {
+            const term = document.getElementById("logTerminal");
+            if(!term) return;
+            const entry = document.createElement("div");
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            term.appendChild(entry);
+            term.scrollTop = term.scrollHeight;
+        }
+
+        function updateArtillerie(delta) {
+            canons.forEach((p, idx) => {
+                if (p.enPanne) {
+                    p.tempsIndisponibilite -= delta;
+                    if (p.tempsIndisponibilite <= 0) { p.enPanne = false; p.chaleur = 0.0; }
+                }
+                if (p.chaleur > 0.0 && !p.enPanne) p.chaleur = Math.max(0.0, p.chaleur - 0.75 * delta);
+                if (p.enRefroidissementForce) {
+                    p.tempsRefroidissementRestant -= delta;
+                    if (p.tempsRefroidissementRestant <= 0) p.enRefroidissementForce = false;
+                }
+                if (p.enRechargement) {
+                    p.tempsRechargementRestant -= delta;
+                    if (p.tempsRechargementRestant <= 0) { p.enRechargement = false; p.estChargee = true; }
+                }
+                if (p.enPointage) {
+                    let diffG = p.gisementCible - p.gisementActuel;
+                    if (Math.abs(diffG) > 0.05) p.gisementActuel += Math.sign(diffG) * Math.min(Math.abs(diffG), 6.0 * delta);
+                    else p.gisementActuel = p.gisementCible;
+
+                    let diffE = p.elevationCible - p.elevationActuelle;
+                    if (Math.abs(diffE) > 0.05) p.elevationActuelle += Math.sign(diffE) * Math.min(Math.abs(diffE), 2.0 * delta);
+                    else p.elevationActuelle = p.elevationCible;
+
+                    if (p.gisementActuel === p.gisementCible && p.elevationActuelle === p.elevationCible) p.enPointage = false;
+                }
+                actualiserCanonUI(p, idx);
+            });
+        }
+
+        function initialiserInterfaceCanons() {
+            const container = document.getElementById("canonsList");
+            if(!container) return;
+            container.innerHTML = "";
+            canons.forEach((p, idx) => {
+                const row = document.createElement("div");
+                row.className = "canon-row";
+                row.innerHTML = `
+                    <div class="canon-id">#${String(p.id).padStart(2, '0')}</div>
+                    <div class="canon-angles" id="angles-${idx}">000.0° / 00.0°</div>
+                    <input type="text" placeholder="Gis/Elév" id="input-hd-${idx}" style="width:70px;">
+                    <select id="select-obus-${idx}" style="width:55px;">
+                        <option value="HE">HE</option><option value="AP">AP</option><option value="SMK">SMK</option><option value="ILL">ILL</option><option value="CLUSTER">CLUSTER</option>
+                    </select>
+                    <button onclick="pointerCanonUI(${idx})" style="padding: 4px 8px;">Pointer</button>
+                    <span style="font-size:0.65rem;">Chg:</span>
+                    <input type="number" value="1" min="1" max="7" id="spin-chg-${idx}" style="width:28px;">
+                    <button onclick="chargerCanonUI(${idx})" style="padding: 4px 8px;">Charge</button>
+                    <button class="btn-fire" id="btn-fire-${idx}" onclick="tirerCanonUI(${idx})" style="padding: 4px 8px;">FEU</button>
+                    <div class="progress-bar-container"><div class="progress-bar-fill" id="bar-fill-${idx}"></div><div class="progress-bar-text" id="bar-text-${idx}">0%</div></div>
+                    <button onclick="refroidirCanonUI(${idx})" style="padding: 4px 6px;">Purge</button>
+                    <div class="canon-status" id="status-${idx}">VIDE</div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function actualiserCanonUI(p, idx) {
+            let angleEl = document.getElementById(`angles-${idx}`);
+            if(!angleEl) return;
+            angleEl.textContent = `${p.gisementActuel.toFixed(1).padStart(5, '0')}° / ${p.elevationActuelle.toFixed(1).padStart(4, '0')}°`;
+            
+            const fill = document.getElementById(`bar-fill-${idx}`);
+            const text = document.getElementById(`bar-text-${idx}`);
+            if(fill && text) {
+                fill.style.width = `${p.chaleur}%`;
+                text.textContent = `${Math.round(p.chaleur)}%`;
+                fill.style.background = p.chaleur <= 70 ? "#27ae60" : (p.chaleur <= 90 ? "#f39c12" : "#e74c3c");
+            }
+
+            const btnFire = document.getElementById(`btn-fire-${idx}`);
+            if(btnFire) {
+                btnFire.style.opacity = (p.estChargee && !p.enPointage && !p.enPanne && !p.enRechargement && !p.enRefroidissementForce) ? "1.0" : "0.4";
+            }
+
+            const lbl = document.getElementById(`status-${idx}`);
+            if(lbl) {
+                if (p.enPanne) {
+                    lbl.textContent = `[ENRAYÉ]`; lbl.style.color = "var(--accent-red-glow)";
+                } else if (p.enRefroidissementForce) {
+                    lbl.textContent = `PURGE (${p.tempsRefroidissementRestant.toFixed(1)}s)`;
+                } else if (p.enPointage) {
+                    lbl.textContent = "POINTEE...";
+                } else if (p.enRechargement) {
+                    lbl.textContent = `CHARGE`;
+                } else if (!p.estChargee) {
+                    lbl.textContent = "VIDE";
+                } else {
+                    lbl.textContent = "PRÊT";
+                    lbl.style.color = "#2ecc71";
+                }
+            }
+        }
+
+        window.pointerCanonUI = function(idx) {
+            let p = canons[idx];
+            let val = document.getElementById(`input-hd-${idx}`).value.trim();
+            if (val) {
+                let parts = val.split("/");
+                if (parts.length >= 2) {
+                    p.gisementCible = Math.min(359.9, Math.max(0, parseFloat(parts[0])));
+                    p.elevationCible = Math.min(89.9, Math.max(0, parseFloat(parts[1])));
+                    p.enPointage = true;
+                }
+                document.getElementById(`input-hd-${idx}`).value = "";
+            }
+        }
+
+        window.chargerCanonUI = function(idx) {
+            let p = canons[idx];
+            p.typeObus = document.getElementById(`select-obus-${idx}`).value;
+            p.nbCharges = parseInt(document.getElementById(`spin-chg-${idx}`).value);
+            if (!p.estChargee && !p.enPanne && !p.enRechargement) {
+                if (stockMunitions[p.typeObus] > 0 && stockMunitions["CHARGES"] >= p.nbCharges) {
+                    stockMunitions[p.typeObus] -= 1;
+                    stockMunitions["CHARGES"] -= p.nbCharges;
+                    actualiserStockUI();
+                    p.enRechargement = true;
+                    p.tempsRechargementRestant = 10.0;
+                } else { logTerminal(`Ravitaillement insuffisant pour charger la pièce #${p.id}.`, "warn"); }
+            }
+        }
+
+        window.tirerCanonUI = function(idx) {
+            let p = canons[idx];
+            if (p.enPanne || p.enPointage || !p.estChargee || p.enRechargement || p.enRefroidissementForce) return;
+            
+            let malusDispersion = p.chaleur >= 90 ? 2.5 : (p.chaleur >= 70 ? 1.5 : 1.0);
+            p.chaleur = Math.min(100.0, p.chaleur + 12.0 + (p.nbCharges * 3.0));
+            if (p.chaleur >= 100.0) {
+                p.enPanne = true; p.tempsIndisponibilite = 180.0;
+                logTerminal(`[URGENCE] Surchauffe critique ! Pièce #${p.id} enrayée !`, "warn");
+            }
+            p.estChargee = false;
+
+            let v0 = VITESSE_INITIALE[p.nbCharges] || (121.3 * Math.sqrt(p.nbCharges));
+            let rad = p.elevationActuelle * Math.PI / 180.0;
+            let distance = (Math.pow(v0, 2) * Math.sin(2.0 * rad)) / GRAVITE;
+            let tempsVol = (2.0 * v0 * Math.sin(rad)) / GRAVITE;
+
+            let angleTirRad = p.gisementActuel * Math.PI / 180.0;
+            let angleVentRad = ventDirection * Math.PI / 180.0;
+            let composanteVentNormale = ventVitesseMS * Math.sin(angleVentRad - angleTirRad);
+            let offsetLat = composanteVentNormale * tempsVol * 1.2;
+
+            let impactTheorique = {
+                x: POS_BATTERIE.x + (Math.cos(angleTirRad) * distance) + (-Math.sin(angleTirRad) * offsetLat),
+                y: POS_BATTERIE.y + (Math.sin(angleTirRad) * distance) + (Math.cos(angleTirRad) * offsetLat)
+            };
+
+            let impactReel = {
+                x: randn_bm(impactTheorique.x, DISPERSION_STANDARD * malusDispersion),
+                y: randn_bm(impactTheorique.y, DISPERSION_STANDARD * malusDispersion)
+            };
+
+            logTerminal(`Pièce #${p.id} : Feu ! Obus ${p.typeObus} (${p.nbCharges} charges, vol: ${tempsVol.toFixed(1)}s)`, "info");
+
+            setTimeout(() => {
+                resoudreImpact(impactReel, p.typeObus, p.id);
+            }, tempsVol * 1000);
+        }
+
+        function resoudreImpact(pos, typeObus, idCanon) {
+            logTerminal(`[ÉCHO] Impact de la pièce #${idCanon} en X:${Math.round(pos.x)} Y:${Math.round(pos.y)}`, "info");
+            dernierImpactCarte = pos;
+            
+            const canvas = document.getElementById("tacticalCanvas");
+            if (canvas && document.getElementById("viewMap").classList.contains("active")) {
+                dessinerCarteTactique(canvas.getContext("2d"), canvas.width, canvas.height);
+            }
+
+            if (!cibleActive || cibleActive.detruite) return;
+
+            let distErreur = Math.hypot(pos.x - cibleActive.pos.x, pos.y - cibleActive.pos.y);
+            let rayonLetal = typeObus === "CLUSTER" ? 45.0 : (typeObus === "AP" ? 8.0 : 20.0);
+
+            if (distErreur <= rayonLetal) {
+                cibleActive.detruite = true;
+                logTerminal(`[OBSERVATEUR] Objectif ${cibleActive.id} neutralisé ! Bien joué camarade !`, "success");
+                let msg = "SPLASH TARGET DESTROYED";
+                messagesFrequences[FREQ_OBSERVATEUR] = texteVersMorse(msg);
+                actualiserRadioUI();
+                if (monRoleActuel === "Radio") jouerSequenceMorseAudio(messagesFrequences[FREQ_OBSERVATEUR], 700);
+                planifierProchaineCible();
+            } else {
+                let dX = cibleActive.pos.x - pos.x;
+                let dY = cibleActive.pos.y - pos.y;
+                let corrLong = Math.round(dY);
+                let corrLat = Math.round(dX);
+
+                donneesFiche.corrN = corrLong > 0 ? `N: ${corrLong}` : "";
+                donneesFiche.corrS = corrLong < 0 ? `S: ${Math.abs(corrLong)}` : "";
+                donneesFiche.corrE = corrLat > 0 ? `E: ${corrLat}` : "";
+                donneesFiche.corrO = corrLat < 0 ? `O: ${Math.abs(corrLat)}` : "";
+
+                injecterValeursFiche();
+
+                let msgCorr = `CORR ${corrLong > 0 ? 'ADD '+corrLong : 'DROP '+Math.abs(corrLong)} ${corrLat > 0 ? 'RIGHT '+corrLat : 'LEFT '+Math.abs(corrLat)}`;
+                logTerminal(`[CORRECTION OBSERVATEUR] ${msgCorr}`, "warn");
+                messagesFrequences[FREQ_OBSERVATEUR] = texteVersMorse(msgCorr);
+                actualiserRadioUI();
+                if (monRoleActuel === "Radio") jouerSequenceMorseAudio(messagesFrequences[FREQ_OBSERVATEUR], 700);
+            }
+        }
+
+        function planifierProchaineCible() {
+            let delaiMs = 15000;
+            if (indexCff > 5) {
+                let minutesMax = Math.max(2.0, 10.0 - (indexCff - 6) * 0.4); 
+                let minutesAleatoires = Math.random() * (minutesMax - 2.0) + 2.0;
+                delaiMs = minutesAleatoires * 60 * 1000;
+                logTerminal(`[RENSEIGNEMENT] L'ennemi se regroupe. Prochaine frappe dans ${minutesAleatoires.toFixed(1)} min.`, "warn");
+            } else {
+                logTerminal(`[RENSEIGNEMENT] Nouvelle désignation dans 15 secondes...`, "info");
+            }
+            setTimeout(genererNouvelleCibleCFF, delaiMs);
+        }
+
+        function estZoneInterdite(colStr, numLigne) {
+            let colIdx = COLONNES.indexOf(colStr);
+            if (numLigne === 1 && colIdx >= 4) return true;
+            if (numLigne === 2 && colIdx >= 4) return true;
+            if (numLigne === 3 && colIdx >= 5) return true;
+            if (numLigne === 4 && colIdx >= 5) return true;
+            if (numLigne === 5 && colIdx >= 6) return true;
+            if (numLigne === 6 && colIdx >= 8) return true;
+            return false;
+        }
+
+        function genererNouvelleCibleCFF() {
+            let col, ligne, keypad, gridStr;
+            let essais = 0;
+            do {
+                col = COLONNES[Math.floor(Math.random() * COLONNES.length)];
+                ligne = Math.floor(Math.random() * 10) + 1;
+                keypad = Math.floor(Math.random() * 9) + 1;
+                gridStr = `${col}${ligne}-${keypad}`;
+                essais++;
+            } while (estZoneInterdite(col, ligne) && essais < 100);
+
+            cibleActive = {
+                id: indexCff++,
+                grid: gridStr,
+                pos: grilleVersPos(gridStr),
+                type: ["INF", "TNK", "ART"][Math.floor(Math.random() * 3)],
+                detruite: false
+            };
+
+            donneesFiche.id = cibleActive.id;
+            donneesFiche.coord = "";
+            donneesFiche.mun = "";
+            donneesFiche.cible = "";
+            donneesFiche.frappe = "";
+            donneesFiche.intensite = "";
+            donneesFiche.vent = "";
+
+            injecterValeursFiche();
+
+            const canvas = document.getElementById("tacticalCanvas");
+            if (canvas && document.getElementById("viewMap").classList.contains("active")) {
+                dessinerCarteTactique(canvas.getContext("2d"), canvas.width, canvas.height);
+            }
+
+            let cffTxt = `CFF ${cibleActive.id} ${cibleActive.type} GRID ${cibleActive.grid} EFF 35 ADJ`;
+            logTerminal(`[ALERTE CFF #${cibleActive.id}] ${cffTxt}`, "warn");
+            messagesFrequences[FREQ_OBSERVATEUR] = texteVersMorse(cffTxt);
+            actualiserRadioUI();
+            if (monRoleActuel === "Radio") jouerSequenceMorseAudio(messagesFrequences[FREQ_OBSERVATEUR], 700);
+        }
+
+        window.refroidirCanonUI = function(idx) {
+            let p = canons[idx];
+            if (!p.enRefroidissementForce && stockMunitions["REFRIGERANT"] > 0) {
+                stockMunitions["REFRIGERANT"] -= 1; actualiserStockUI();
+                p.chaleur = Math.max(0.0, p.chaleur - 40.0);
+                p.enRefroidissementForce = true; p.tempsRefroidissementRestant = 7.5;
+            }
+        }
+
+        window.appliquerGlobal = function() {
+            let val = document.getElementById("inputGlobal").value.trim();
+            if (!val) return;
+            let parts = val.split("/");
+            if (parts.length >= 2) {
+                let g = parseFloat(parts[0]), e = parseFloat(parts[1]);
+                canons.forEach(p => { p.gisementCible = g; p.elevationCible = e; p.enPointage = true; });
+            }
+            document.getElementById("inputGlobal").value = "";
+        }
+
+        window.feuBatterie = function() {
+            canons.forEach((p, idx) => { if (p.estChargee && !p.enPointage) tirerCanonUI(idx); });
+        }
+
+        function actualiserStockUI() {
+            const grid = document.getElementById("stockGrid");
+            if(!grid) return;
+            grid.innerHTML = "";
+            for (let type in stockMunitions) {
+                let div = document.createElement("div");
+                div.textContent = `${type}: ${stockMunitions[type]} / ${maxMunitions[type]}`;
+                grid.appendChild(div);
+            }
+            let elCamions = document.getElementById("statusCamionsLog");
+            if(elCamions) elCamions.textContent = `Camions dispo: ${camionsDisponibles}/3`;
+        }
+
+        function actualiserMeteoAtis() {
+            atisIndex = (atisIndex + 1) % ALPHABET_OACI.length;
+            ventDirection = Math.floor(Math.random() * 36) * 10;
+            ventVitesseMS = Math.floor(Math.random() * 12) + 1;
+            let msg = `INFO ${ALPHABET_OACI[atisIndex]} WIND ${String(ventDirection).padStart(3, '0')} ${String(ventVitesseMS).padStart(2, '0')}`;
+            messagesFrequences[FREQ_ATIS] = texteVersMorse(msg);
+            actualiserRadioUI();
+        }
+
+        window.ajusterFrequence = function(delta) {
+            frequenceActuelle = Math.min(150.0, Math.max(30.0, frequenceActuelle + delta));
+            document.getElementById("radioFreq").textContent = `FRÉQ : ${frequenceActuelle.toFixed(2)} MHz`;
+            actualiserRadioUI();
+        }
+
+        function actualiserRadioUI() {
+            let minEcart = 999, freqProche = FREQ_OBSERVATEUR;
+            STATIONS_CONNUES.forEach(f => {
+                let ecart = Math.abs(frequenceActuelle - f);
+                if (ecart < minEcart) { minEcart = ecart; freqProche = f; }
+            });
+
+            let screen = document.getElementById("radioMorse");
+            if(!screen) return;
+
+            if (minEcart > 1.5) {
+                screen.textContent = "[BROUILLAGE / STATIQUE]";
+                if(noiseGain && monRoleActuel === "Radio") noiseGain.gain.value = 0.2;
+                else if(noiseGain) noiseGain.gain.value = 0.0;
+                return;
+            }
+
+            if(noiseGain && monRoleActuel === "Radio") {
+                noiseGain.gain.value = Math.max(0.01, minEcart * 0.1);
+            } else if(noiseGain) {
+                noiseGain.gain.value = 0.0;
+            }
+            
+            screen.textContent = messagesFrequences[freqProche] || "[PAS DE SIGNAL]";
+        }
+
+        function jouerBipMorse(dureeMs, freqBip = 700) {
+            if (!audioCtx || monRoleActuel !== "Radio") return;
+            let osc = audioCtx.createOscillator();
+            let gainNode = audioCtx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = freqBip;
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            osc.start();
+            osc.stop(audioCtx.currentTime + (dureeMs / 1000));
+        }
+
+        async function jouerSequenceMorseAudio(morseStr, freqBip = 700) {
+            if (monRoleActuel !== "Radio") return;
+            let unite = 80;
+            for (let c of morseStr) {
+                if (monRoleActuel !== "Radio") break;
+                if (c === '.') {
+                    jouerBipMorse(unite, freqBip);
+                    await new Promise(r => setTimeout(r, unite * 2));
+                } else if (c === '-') {
+                    jouerBipMorse(unite * 3, freqBip);
+                    await new Promise(r => setTimeout(r, unite * 4));
+                } else if (c === ' ') {
+                    await new Promise(r => setTimeout(r, unite * 3));
+                } else if (c === '/') {
+                    await new Promise(r => setTimeout(r, unite * 7));
+                }
+            }
+        }
+
+        window.envoyerMorseManuel = function() {
+            if (monRoleActuel !== "Radio") return;
+            let input = document.getElementById("inputMorse");
+            if(!input) return;
+            let txt = input.value.trim().toUpperCase();
+            if (!txt) return;
+
+            let diffSpotter = Math.abs(frequenceActuelle - FREQ_OBSERVATEUR) <= 0.05;
+            let diffLog = Math.abs(frequenceActuelle - FREQ_LOG) <= 0.05;
+
+            if (diffSpotter && (txt === "READY" || txt === ".-. .- -.. -..-")) {
+                if (!jeuDemarre) {
+                    jeuDemarre = true;
+                    logTerminal("[QG] Ordre READY reçu. Ouverture de la liaison de combat.", "success");
+                    messagesFrequences[FREQ_OBSERVATEUR] = "READY REÇU - VEILLE ACTIVE...";
+                    actualiserRadioUI();
+                    jouerSequenceMorseAudio(texteVersMorse("READY"), 700);
+                    setTimeout(genererNouvelleCibleCFF, 8000);
+                }
+            } else if (diffLog && txt.startsWith("REQ")) {
+                let parts = txt.split(" ");
+                if (parts.length >= 3) {
+                    let typeType = parts[1];
+                    let qte = parseInt(parts[2]);
+                    if (stockMunitions[typeType] !== undefined && qte > 0 && camionsDisponibles > 0) {
+                        camionsDisponibles--;
+                        actualiserStockUI();
+                        logTerminal(`[INTENDANCE] Convoi parti pour ${qte}x ${typeType} (20s)`, "info");
+                        messagesFrequences[FREQ_LOG] = texteVersMorse(`CONVOI ROUTE ${qte} ${typeType}`);
+                        actualiserRadioUI();
+                        jouerSequenceMorseAudio(messagesFrequences[FREQ_LOG], 600);
+
+                        setTimeout(() => {
+                            stockMunitions[typeType] = Math.min(maxMunitions[typeType], stockMunitions[typeType] + qte);
+                            camionsDisponibles++;
+                            actualiserStockUI();
+                            logTerminal(`[INTENDANCE] Convoi arrivé sous les bombes ! ${qte}x ${typeType} livrés.`, "success");
+                            messagesFrequences[FREQ_LOG] = texteVersMorse("LIVRAISON OK");
+                            actualiserRadioUI();
+                        }, 20000);
+                    } else {
+                        logTerminal("[INTENDANCE] Pas de camions disponibles, camarade !", "warn");
+                    }
+                }
+            } else {
+                let code = texteVersMorse(txt);
+                jouerSequenceMorseAudio(code, 700);
+            }
+            input.value = "";
+        }
+
+        function grilleVersPos(grille) {
+            let match = grille.trim().toUpperCase().match(/^([A-J])([1-9]|10)-([1-9])$/);
+            if (!match) return { x: 5000, y: 5000 };
+            let colIdx = COLONNES.indexOf(match[1]);
+            let numLigne = parseInt(match[2]);
+            let keypad = parseInt(match[3]);
+            let baseX = colIdx * TAILLE_CASE;
+            let baseY = (numLigne - 1) * TAILLE_CASE;
+            let subCol = (keypad - 1) % 3;
+            let subRow = 2 - Math.floor((keypad - 1) / 3);
+            let tailleSub = TAILLE_CASE / 3.0;
+            return { x: baseX + (subCol * tailleSub) + (tailleSub / 2.0), y: baseY + (subRow * tailleSub) + (tailleSub / 2.0) };
+        }
+
+        function randn_bm(mean, std) {
+            let u = 0, v = 0;
+            while(u === 0) u = Math.random();
+            while(v === 0) v = Math.random();
+            return (Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v)) * std + mean;
+        }
+
+        function texteVersMorse(texte) {
+            const MORSE = { 'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.', 'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..', 'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.', 'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '-..-', 'X': '-..-', 'Y': '-.--', 'Z': '--..', '0': '-----', '1': '.----', '2': '..---', '3': '...--', '4': '....-', '5': '.....', '6': '-....', '7': '--...', '8': '---..', '9': '----.', ' ': '/' };
+            return texte.split('').map(c => MORSE[c] || '').join(' ');
+        }
+    </script>
+</body>
+</html>
